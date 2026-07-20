@@ -1,0 +1,162 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <functional>
+
+const std::string DB_FILE = "users.txt";
+
+// --- Helper Functions ---
+
+// Simple string hashing function
+std::string hashPassword(const std::string& password) {
+    std::hash<std::string> hasher;
+    size_t hashValue = hasher(password);
+    
+    std::stringstream ss;
+    ss << std::hex << hashValue;
+    return ss.str();
+}
+
+// Check if username already exists inside users.txt
+bool userExists(const std::string& username) {
+    std::ifstream file(DB_FILE);
+    if (!file.is_open()) {
+        return false; // If file doesn't exist yet, no users exist
+    }
+
+    std::string storedUser, storedHash;
+    // Reads pairs of username and hashed password line by line
+    while (file >> storedUser >> storedHash) {
+        if (storedUser == username) {
+            file.close();
+            return true;
+        }
+    }
+
+    file.close();
+    return false;
+}
+
+// --- Main Task Functions ---
+
+// 1. Registration Function
+void registerUser() {
+    std::string username, password;
+
+    std::cout << "\n=== User Registration ===\n";
+    std::cout << "Enter username: ";
+    std::cin >> username;
+
+    // Input Validation
+    if (username.length() < 3) {
+        std::cout << " Error: Username must be at least 3 characters long.\n";
+        return;
+    }
+
+    // Check Duplicate
+    if (userExists(username)) {
+        std::cout << " Error: Username '" << username << "' is already taken.\n";
+        return;
+    }
+
+    std::cout << "Enter password: ";
+    std::cin >> password;
+
+    if (password.length() < 6) {
+        std::cout << " Error: Password must be at least 6 characters long.\n";
+        return;
+    }
+
+    // Hash the password for security
+    std::string hashedPassword = hashPassword(password);
+
+    // Append user credentials to users.txt
+    std::ofstream file(DB_FILE, std::ios::app);
+    if (file.is_open()) {
+        file << username << " " << hashedPassword << "\n";
+        file.close();
+        std::cout << " Success: Registration successful! You can now log in.\n";
+    } else {
+        std::cout << " Error: Could not open database file for writing.\n";
+    }
+}
+
+// 2. Login Function
+void loginUser() {
+    std::string username, password;
+
+    std::cout << "\n=== User Login ===\n";
+    std::cout << "Enter username: ";
+    std::cin >> username;
+
+    std::cout << "Enter password: ";
+    std::cin >> password;
+
+    std::ifstream file(DB_FILE);
+    if (!file.is_open()) {
+        std::cout << " Error: No registered users found. Please register first.\n";
+        return;
+    }
+
+    std::string storedUser, storedHash;
+    bool found = false;
+
+    // Search file for matching credentials
+    while (file >> storedUser >> storedHash) {
+        if (storedUser == username) {
+            found = true;
+            if (storedHash == hashPassword(password)) {
+                std::cout << " Success: Login successful! Welcome back, " << username << "!\n";
+            } else {
+                std::cout << " Error: Incorrect password. Access denied.\n";
+            }
+            break;
+        }
+    }
+
+    if (!found) {
+        std::cout << " Error: Username not found. Please register first.\n";
+    }
+
+    file.close();
+}
+
+// --- Main Menu Interface ---
+
+int main() {
+    int choice = 0;
+
+    while (choice != 3) {
+        std::cout << "\n==============================\n";
+        std::cout << " LOGIN & REGISTRATION SYSTEM  \n";
+        std::cout << "==============================\n";
+        std::cout << "1. Register\n";
+        std::cout << "2. Login\n";
+        std::cout << "3. Exit\n";
+        std::cout << "Choose an option (1-3): ";
+        
+        if (!(std::cin >> choice)) {
+            std::cin.clear();
+            std::cin.ignore(1000, '\n');
+            std::cout << " Invalid input. Please enter a number.\n";
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                registerUser();
+                break;
+            case 2:
+                loginUser();
+                break;
+            case 3:
+                std::cout << "Exiting system. Goodbye!\n";
+                break;
+            default:
+                std::cout << " Invalid choice. Please choose 1, 2, or 3.\n";
+        }
+    }
+
+    return 0;
+}
